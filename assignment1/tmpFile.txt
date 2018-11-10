@@ -1,0 +1,10 @@
+Here's an example of a text file:
+
+We have an EXAMPLE of lowercase, aND yeT anothER oNe.
+
+Here is an example of a number 1234 changing into something else! 
+and notice how ! vanished!
+
+We also have some $111 going on. 
+
+and look how we don't have don't as one word because life is ain't about that. 
