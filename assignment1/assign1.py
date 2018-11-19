@@ -151,38 +151,43 @@ class NgramModel(object):
         self.is_unigram_model = (n == 1)
         cfd = nltk.ConditionalFreqDist((" ".join(train[i : i + n - 1]), "".join(train[i + n - 1])) for i in range(len(train) - n + 1))
         self._probdist = nltk.ConditionalProbDist(cfd, estimator)
-
-        print("PROBLIST",self._probdist.conditions())
+        self._ngramsData = ngrams(train, n)
+        self._ngrams = set()
+        for ngram in self._ngramsData:
+            print(ngram)
+            self._ngrams.add(ngram)
         
         if not self.is_unigram_model:
             self._backoff = NgramModel(n - 1, train, estimator)
             self._lambda = 1
-        if self.is_unigram_model:
-            vocab = sorted(set(train))
-            # for cond in self._probdist.conditions():
-            for v in vocab:
-                print(v)
-                print(self._probdist[""].prob(v))
-
+    
     def prob(self, word, context):
-        print("n", self._n)
-        print(self.is_unigram_model)
-        print("c", context)
-        print("w", word)
-        context_condition = (context in self._probdist.conditions()) and (not(self._probdist[context].prob(word) == 0))
-        print((context_condition) or (self.is_unigram_model))
-        
-        if (context_condition) or (self.is_unigram_model):
+        print("c:", context)
+        print("w:", word)
+        print("tuple", tuple(context.split()) + (word, ))
+        print(tuple(context.split()) + (word, ) in self._ngrams)
+        if (tuple(context.split()) + (word, ) in self._ngrams) or (self.is_unigram_model):
             print("probdist", self._probdist[context].prob(word))
             return self._probdist[context].prob(word)
         else:
             new_context = " ".join(context.split()[1:])
             backoff = self._backoff.prob(word, new_context)
-            print("backoff", backoff)
+            print("backoff",backoff)
+
             return self._lambda * backoff
         
     def logprob(self, word, context):
         return -(log(self.prob(word, context), 2))
+    
+    def entropy(self, text):
+        H = 0.0
+        for i in range(self._n - 1, len(text)):
+            context, word = tuple(text[i - self._n + 1:i]), text[i]
+            context = " ".join(context)
+            print("cont", context)
+            print("word", word)
+            H += self.logprob(word, context)
+        return H / float(len(text) - (self._n - 1))
     
     def get_model(self):
         return self._probdist
@@ -236,6 +241,8 @@ def model_entropy(model, text, n=2):
     for i in range(n - 1, len(text)):
         context, word = tuple(text[i - n + 1:i]), text[i]
         context = " ".join(context)
+        print("cont", context)
+        print("word", word)
         H += model.logprob(word, context)
     return H / float(len(text) - (n - 1))
 
