@@ -1,0 +1,3 @@
+we want to make sure this text reader splits words like don't the right way,
+and also that it will remove all the punctioation marks, because we don't need those in our life :
+here, they're gone. 
