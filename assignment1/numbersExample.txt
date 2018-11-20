@@ -1,4 +1,4 @@
 see how 123 will turn into the number format
 even if it's 123$
-or #123 or 1_2_3 
+or #123 or 1 2 3 
 a number is always a number

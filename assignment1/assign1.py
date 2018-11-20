@@ -154,7 +154,6 @@ class NgramModel(object):
         self._ngramsData = ngrams(train, n)
         self._ngrams = set()
         for ngram in self._ngramsData:
-            print(ngram)
             self._ngrams.add(ngram)
         
         if not self.is_unigram_model:
