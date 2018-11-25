@@ -76,3 +76,36 @@ def optimizePLSLambda(xt, tt, xv, tv, M):
             avg_err = curr_err
             w_max = np.copy(w_curr)
     return w_max
+
+def bayesianEstimator(x, t, M, alpha, sigma2):
+    N = len(x)
+    
+    #builds phi for given vector xx
+    def phi(xx):
+        return np.array([(xx ** i) for i in range(M + 1)])
+    
+    #calculate S
+    alpha_i = alpha * np.eye(M + 1)
+    S = np.zeros((M + 1, M + 1))
+    for i in range(N):
+        phi_xi = phi(x[i])
+        S += np.outer(phi_xi, phi_xi.T)
+    S = np.linalg.inv(alpha_i + (S / sigma2))
+    
+    #calculate m(x)
+    def m(xx):
+        phi_t = phi(xx).T
+        xt_sum = np.zeros(M + 1)
+        for i in range(N):
+            xt_sum += phi(x[i]) * t[i]
+        return (1 / sigma2) * np.dot(np.dot(phi_t, S), xt_sum)
+    
+    #calculate s2(xx)
+    def var(xx):
+        phi_x = phi(xx)
+        return sigma2 + np.dot(phi_x.T, np.dot(S, phi_x))
+    
+    mean = lambda x_t: m(x_t)
+    variance = lambda x_t: var(x_t)
+    
+    return (mean, variance)

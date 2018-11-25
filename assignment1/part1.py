@@ -66,31 +66,40 @@ def ptb_preprocess(filenames, top=10000):
 
 # part 1.2
 class NgramModel(object):
-    def __init__(self, n, train, estimator=None):
+    def __init__(self, n, train, smoothing=False, estimator=None):
         self._n = n
         self.is_unigram_model = (n == 1)
+        self.is_smooth = smoothing
+        
         cfd = nltk.ConditionalFreqDist((" ".join(train[i : i + n - 1]), "".join(train[i + n - 1])) for i in range(len(train) - n + 1))
         self._probdist = nltk.ConditionalProbDist(cfd, estimator)
         
-        self._ngramsData = ngrams(train, n)
-        self._ngrams = set()
-        for ngram in self._ngramsData:
-            self._ngrams.add(ngram)
+        # if we are not using smoothing we should implement a backoff model and keep all the seen ngrams
+        if not self.is_smooth:
+            self._ngramsData = ngrams(train, n)
+            self._ngrams = set()
+            for ngram in self._ngramsData:
+                self._ngrams.add(ngram)
         
         if not self.is_unigram_model:
-            self._backoff = NgramModel(n - 1, train, estimator)
-            self._lambda = 1
+            if not self.is_smooth:
+                self._backoff = NgramModel(n - 1, train, estimator=estimator)
+                self._lambda = 1
     
     def prob(self, word, context):
-        if (tuple(context.split()) + (word, ) in self._ngrams) or (self.is_unigram_model):
-            return self._probdist[context].prob(word)
+        if (self.is_smooth and self._probdist[context].logprob(word) != 0):
+            return self._probdist[context].logprob(word)
+        
+        # if we are not using smoothing we need to use a different method for avoiding 0 probability 
+        elif (tuple(context.split()) + (word, ) in self._ngrams) or (self.is_unigram_model):
+            return self._probdist[context].logprob(word)
         else:
             new_context = " ".join(context.split()[1:])
             backoff = self._backoff.prob(word, new_context)
             return self._lambda * backoff
         
     def logprob(self, word, context):
-        return -(log(self.prob(word, context), 2))
+        return - self.prob(word, context)
     
     def get_seed(self):
         return random.choice(self._probdist.conditions())
@@ -165,7 +174,7 @@ def char_model_entropy(model, text, n=2):
                     score = v
         if(not(score == 0 or score == 0.0)) :
             processed_ws += 1
-            H += np.log2(score)
+            H += log(score, 2)
     return - (H / float(len(text) - n))
 
 def calc_preplexity_char(model, text, n=2):
