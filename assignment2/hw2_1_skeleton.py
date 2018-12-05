@@ -144,7 +144,49 @@ def word_frequency_threshold(training_file, development_file, counts):
         
 ## Trains a Naive Bayes classifier using length and frequency features
 def naive_bayes(training_file, development_file, counts):
-    ## YOUR CODE HERE
+    #import training dataset
+    t_words, t_labels = load_file(training_file)
+    t_features = {}
+    # get length features
+    t_features["length"] = np.array([len(word) for word in t_words])
+    # get frequency features
+    t_features["frequency"] = np.array([counts[word] for word in t_words])
+    # build features array
+    X_t_original = np.array([t_features["length"], t_features["frequency"]]).T
+    
+    # normalize features
+    t_mean = np.mean(X_t_original)
+    t_sd = np.std(X_t_original)
+    X_t_scaled = (X_t_original - t_mean)/t_sd
+    
+    # train the classifier
+    clf = GaussianNB()
+    clf.fit(X_t_scaled, t_labels)
+    
+    # extract features for development file
+    d_words, d_labels = load_file(development_file)
+    d_features = {}
+    # get length features
+    d_features["length"] = np.array([len(word) for word in d_words])
+    # get frequency features
+    d_features["frequency"] = np.array([counts[word] for word in d_words])
+    # build features array
+    X_d_original = np.array([d_features["length"], d_features["frequency"]]).T
+    
+    # normalize development features - note how we use the training mean and sd
+    X_d_scaled = (X_d_original - t_mean)/t_sd
+    
+    dev_pred = clf.predict(X_d_scaled)
+    train_pred = clf.predict(X_t_scaled)
+    
+    tprecision = get_precision(train_pred, t_labels)
+    trecall = get_recall(train_pred, t_labels)
+    tfscore = get_fscore(train_pred, t_labels)
+    
+    dprecision = get_precision(dev_pred, d_labels)
+    drecall = get_recall(dev_pred, d_labels)
+    dfscore = get_fscore(dev_pred, d_labels)
+    
     training_performance = [tprecision, trecall, tfscore]
     development_performance = [dprecision, drecall, dfscore]
     return training_performance, development_performance
