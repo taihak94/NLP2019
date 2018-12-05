@@ -99,6 +99,15 @@ def word_length_threshold(training_file, development_file):
     return training_performance, development_performance
 
 ### 1.2.3: Word frequency thresholding
+def word_frequency_baseline(data_file, counts, threshold):
+    words, actual_labels = load_file(data_file)
+    threshold_labels = [(1 if(counts[word] >= threshold) else 0) for word in words]
+    
+    precision = get_precision(threshold_labels, actual_labels)
+    recall = get_recall(threshold_labels, actual_labels)
+    fscore = get_fscore(threshold_labels, actual_labels)
+    preformance = [precision, recall, fscore]
+    return preformance
 
 ## Loads Google NGram counts
 def load_ngram_counts(ngram_counts_file): 
@@ -113,7 +122,20 @@ def load_ngram_counts(ngram_counts_file):
 # Finds the best frequency threshold by f-score, and uses this threshold to
 ## classify the training and development set
 def word_frequency_threshold(training_file, development_file, counts):
-    ## YOUR CODE HERE
+    best_tfscore = 0.0
+    i = 1
+    threshold = np.random.randint(10, 2000000, size=1, dtype=int)
+    while(True):
+        tprecision, trecall, tfscore = word_frequency_baseline(training_file, counts, threshold)
+        if(tfscore < best_tfscore):
+            break
+        else:
+            threshold = np.random.randint(10, 2000000, size=1, dtype=int)
+            best_tfscore = tfscore
+            
+    tprecision, trecall, tfscore = word_frequency_baseline(training_file, counts, threshold)
+    dprecision, drecall, dfscore = word_frequency_baseline(development_file, counts, threshold)
+    
     training_performance = [tprecision, trecall, tfscore]
     development_performance = [dprecision, drecall, dfscore]
     return training_performance, development_performance
