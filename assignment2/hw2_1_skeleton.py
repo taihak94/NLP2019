@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 ## Calculates the precision of the predicted labels
 def get_precision(y_pred, y_true):
-    positive_hits_array = np.array([(1 if(y_pred[i] == y_true[i] == 1) else 0) for i in range(len(y_pred))])
+    positive_hits_array = np.array([(y_pred[i] == y_true[i] == 1) for i in range(len(y_pred))])
     positive_hits = np.count_nonzero(positive_hits_array == 1)
     total_positive = np.count_nonzero(np.array(y_pred) == 1)
     precision = float(positive_hits) / float(total_positive)
@@ -21,19 +21,23 @@ def get_precision(y_pred, y_true):
     
 ## Calculates the recall of the predicted labels
 def get_recall(y_pred, y_true):
-    positive_hits_array = np.array([(1 if(y_pred[i] == y_true[i] == 1) else 0) for i in range(len(y_pred))])
+    positive_hits_array = np.array([(y_pred[i] == y_true[i] == 1) for i in range(len(y_pred))])
     positive_hits = np.count_nonzero(positive_hits_array == 1)
-    total_positive = np.count_nonzero(np.array(y_true) == 1)
-    recall = float(positive_hits) / float(total_positive)
-
+    false_negative_array = np.array([((not(y_pred[i] == y_true[i] )) and (y_pred[i] == 0)) for i in range(len(y_pred))])
+    false_negative =  np.count_nonzero(false_negative_array)
+    recall = float(positive_hits) / float(positive_hits + false_negative)
     return recall
 
 ## Calculates the f-score of the predicted labels
 def get_fscore(y_pred, y_true):
     precision = get_precision(y_pred, y_true)
     recall = get_recall(y_pred, y_true)
+    
+    # in case we might tr and divide by 0 
+    if(precision + recall) == 0:
+        return 0
+    
     fscore = 2 * float(precision * recall) / float(precision + recall)
-
     return fscore
 
 #### 2. Complex Word Identification ####
@@ -69,7 +73,7 @@ def all_complex(data_file):
 
 def word_length_baseline(data_file, threshold):
     words, actual_labels = load_file(data_file)
-    threshold_labels = [(1 if(len(word) >= threshold) else 0) for word in words]
+    threshold_labels = [(len(word) >= threshold) for word in words]
     
     precision = get_precision(threshold_labels, actual_labels)
     recall = get_recall(threshold_labels, actual_labels)
@@ -86,6 +90,7 @@ def word_length_threshold(training_file, development_file):
     while(True):
         tprecision, trecall, tfscore = word_length_baseline(training_file, i)
         if(tfscore < best_tfscore):
+            print("best threshold is: ", best_i)
             break
         else:
             best_i = i
@@ -101,8 +106,7 @@ def word_length_threshold(training_file, development_file):
 ### 1.2.3: Word frequency thresholding
 def word_frequency_baseline(data_file, counts, threshold):
     words, actual_labels = load_file(data_file)
-    threshold_labels = [(1 if(counts[word] >= threshold) else 0) for word in words]
-    
+    threshold_labels = [counts[word] < threshold for word in words]
     precision = get_precision(threshold_labels, actual_labels)
     recall = get_recall(threshold_labels, actual_labels)
     fscore = get_fscore(threshold_labels, actual_labels)
@@ -123,18 +127,20 @@ def load_ngram_counts(ngram_counts_file):
 ## classify the training and development set
 def word_frequency_threshold(training_file, development_file, counts):
     best_tfscore = 0.0
+    best_threshold = 0
     i = 1
-    threshold = np.random.randint(10, 2000000, size=1, dtype=int)
-    while(True):
+    thresholds = np.sort(np.random.randint(40, 225568038, size=30, dtype=int))
+    print("thresholds:", thresholds)
+    for threshold in thresholds:
         tprecision, trecall, tfscore = word_frequency_baseline(training_file, counts, threshold)
-        if(tfscore < best_tfscore):
-            break
-        else:
-            threshold = np.random.randint(10, 2000000, size=1, dtype=int)
+        if(tfscore > best_tfscore):
             best_tfscore = tfscore
+            best_threshold = threshold
+    
+    print("best threshold", best_threshold)
             
-    tprecision, trecall, tfscore = word_frequency_baseline(training_file, counts, threshold)
-    dprecision, drecall, dfscore = word_frequency_baseline(development_file, counts, threshold)
+    tprecision, trecall, tfscore = word_frequency_baseline(training_file, counts, best_threshold)
+    dprecision, drecall, dfscore = word_frequency_baseline(development_file, counts, best_threshold)
     
     training_performance = [tprecision, trecall, tfscore]
     development_performance = [dprecision, drecall, dfscore]
